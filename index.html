@@ -177,6 +177,11 @@ textarea{font-family:inherit;resize:none}
 .resp-further strong{display:block;color:var(--accent-dim);margin-bottom:4px;font-size:.77rem;text-transform:uppercase;letter-spacing:.05em}
 .warning-bubble{background:rgba(251,191,36,.06)!important;border-color:rgba(251,191,36,.25)!important;color:var(--amber)!important}
 .error-bubble{background:rgba(248,113,113,.06)!important;border-color:rgba(248,113,113,.25)!important;color:var(--red)!important}
+/* Intent analysis & clarification blocks */
+.resp-intent{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:12px;font-size:.83rem;color:var(--text-2);line-height:1.6}
+.resp-intent-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--blue);margin-bottom:4px}
+.resp-clarify{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.25);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:12px;font-size:.83rem;color:var(--blue);line-height:1.6}
+.resp-clarify-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--blue);margin-bottom:4px;opacity:.75}
 
 /* Thinking dots */
 .thinking-dots{display:flex;gap:4px;align-items:center;padding:4px 0}
@@ -385,12 +390,19 @@ INPUT HANDLING
 • If context is missing but important (e.g., location for variety recommendation), ask one clarifying question before answering.
 
 ─────────────────────────
-MANDATORY OUTPUT FORMAT
+PROACTIVE RESPONSE STRUCTURE
 ─────────────────────────
+For every user input, you must:
+1. ANALYZE the intent — what is the user actually asking, in one concise sentence.
+2. CLARIFY — if the question is ambiguous or missing key context, write one clarifying question. If the question is clear, set this to an empty string and proceed directly to the answer.
+3. ANSWER — provide the full structured advisory response.
+
 Respond ONLY with a valid JSON object — no text before or after the JSON:
 
 {
-  "summary": "One-sentence direct answer.",
+  "intent_analysis": "One sentence describing what the user is asking and why it matters.",
+  "clarification": "One clarifying question if ambiguous, or empty string if the question is clear.",
+  "summary": "One-sentence direct answer to the question.",
   "confidence": "High | Moderate | Low",
   "confidence_reason": "Brief reason for confidence level.",
   "steps": [
@@ -410,13 +422,15 @@ Respond ONLY with a valid JSON object — no text before or after the JSON:
 }
 
 Rules:
-1. "steps" must contain 3–5 complete, actionable sentences.
-2. "confidence" must be exactly "High", "Moderate", or "Low".
-3. "further_reading" must have 1–2 real, verifiable URLs from ICRISAT, FAO, ICAR, or university extension services. Never fabricate URLs.
-4. "sources_used" must list only sources actually used.
-5. No markdown, code fences, or text outside the JSON.
-6. Plain language suitable for farmers. Define jargon if unavoidable.
-7. NEVER hallucinate values. Flag uncertainty; recommend verifying with local agronomist.
+1. "intent_analysis" — always populated; 1 concise sentence max.
+2. "clarification" — set to "" if the question is unambiguous; otherwise one question only.
+3. "steps" must contain 3–5 complete, actionable sentences.
+4. "confidence" must be exactly "High", "Moderate", or "Low".
+5. "further_reading" must have 1–2 real, verifiable URLs. Never fabricate URLs.
+6. "sources_used" lists only sources actually used.
+7. No markdown, code fences, or text outside the JSON.
+8. Plain language for farmers. Define jargon if unavoidable.
+9. NEVER hallucinate. Flag uncertainty; recommend verifying with local agronomist.
 
 ─────────────────────────
 SAFETY REQUIREMENTS
@@ -734,16 +748,32 @@ function addBotMsg(data) {
       <div class="bubble warning-bubble">⚠️ Unexpected response format. Raw reply:<br><br>${esc(data._raw)}</div>`;
   } else {
     const confClass = { High:'conf-high', Moderate:'conf-moderate', Low:'conf-low' }[data.confidence] || 'conf-moderate';
-    const steps = (data.steps||[]).map(s=>`<li>${esc(s)}</li>`).join('');
-    const chips = (data.sources_used||[]).map(s=>`<span class="source-tag">${esc(s)}</span>`).join('');
+    const steps   = (data.steps||[]).map(s=>`<li>${esc(s)}</li>`).join('');
+    const chips   = (data.sources_used||[]).map(s=>`<span class="source-tag">${esc(s)}</span>`).join('');
     const further = (data.further_reading||[]).map(r=>`• <a href="${escUrl(r.url)}" target="_blank" rel="noopener noreferrer">${esc(r.title)}</a>`).join('<br>');
-    const region = data.region_notes ? `<p class="resp-title">📍 Regional Notes</p>
+    const region  = data.region_notes ? `<p class="resp-title">📍 Regional Notes</p>
       <p style="font-size:.85rem;color:var(--text-2);line-height:1.6">${esc(data.region_notes)}</p>` : '';
-    const safety = data.safety ? `<p class="resp-title">⚠️ Safety</p>
+    const safety  = data.safety ? `<p class="resp-title">⚠️ Safety</p>
       <p style="font-size:.85rem;color:var(--amber);line-height:1.6">${esc(data.safety)}</p>` : '';
+
+    // Part 1 — Intent analysis (always shown)
+    const intentHtml = data.intent_analysis ? `
+      <div class="resp-intent">
+        <div class="resp-intent-label">🔍 Understanding your question</div>
+        ${esc(data.intent_analysis)}
+      </div>` : '';
+
+    // Part 2 — Clarification (only if ambiguous)
+    const clarifyHtml = data.clarification ? `
+      <div class="resp-clarify">
+        <div class="resp-clarify-label">💬 Clarifying question</div>
+        ${esc(data.clarification)}
+      </div>` : '';
 
     wrap.innerHTML = `<div class="avatar" aria-hidden="true">🥜</div>
       <div class="bubble">
+        ${intentHtml}
+        ${clarifyHtml}
         <span class="confidence-badge ${confClass}" aria-label="Confidence: ${esc(data.confidence)}">
           ● ${esc(data.confidence||'Moderate')} Confidence
           ${data.confidence_reason?`<span style="font-weight:400;opacity:.75"> — ${esc(data.confidence_reason)}</span>`:''}
