@@ -300,9 +300,10 @@ function renderChatHistory() {
     if (item.role === 'user') {
       renderMessage(item);
     } else {
-      renderStructuredMessage(item);
-      updateSnapshot(item.content);
-      updateFollowUps(item.content.follow_up_questions);
+      const advisory = normalizeAdvisory(item.content);
+      renderStructuredMessage({ ...item, content: advisory });
+      updateSnapshot(advisory);
+      updateFollowUps(advisory.follow_up_questions);
     }
   }
 }
@@ -322,7 +323,7 @@ function renderMessage(message) {
 }
 
 function renderStructuredMessage(message) {
-  const data = message.content;
+  const data = normalizeAdvisory(message.content);
   const article = document.createElement('article');
   article.className = 'message message-bot';
   article.innerHTML = `
@@ -417,15 +418,17 @@ function renderError(message) {
 }
 
 function updateSnapshot(data) {
+  const advisory = normalizeAdvisory(data);
   dom.snapshotCard.innerHTML = `
-    <span class="mini-label">${escapeHtml(data.headline)}</span>
-    <strong>${escapeHtml(data.summary)}</strong>
-    <p>Urgency is <strong>${escapeHtml(data.urgency)}</strong>. Top next step: ${escapeHtml(data.recommended_actions[0] || 'Review the full advisory.')}</p>
+    <span class="mini-label">${escapeHtml(advisory.headline)}</span>
+    <strong>${escapeHtml(advisory.summary)}</strong>
+    <p>Urgency is <strong>${escapeHtml(advisory.urgency)}</strong>. Top next step: ${escapeHtml(advisory.recommended_actions[0] || 'Review the full advisory.')}</p>
   `;
 }
 
 function updateFollowUps(questions) {
-  const merged = questions.length ? questions : [
+  const safeQuestions = Array.isArray(questions) ? questions.filter(question => typeof question === 'string' && question.trim()) : [];
+  const merged = safeQuestions.length ? safeQuestions : [
     'Give a preventive checklist for the next 7 days.',
     'What field observations should I send next?',
   ];
@@ -600,6 +603,38 @@ function ensureSourceArray(value) {
       url: item.url.trim(),
     }))
     .filter(item => item.title && /^https?:\/\//i.test(item.url));
+}
+
+function normalizeAdvisory(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {
+      headline: 'Groundnut advisory',
+      summary: typeof value === 'string' && value.trim() ? value.trim() : 'No advisory details were available.',
+      urgency: 'Medium',
+      confidence: 'Moderate',
+      possible_causes: [],
+      recommended_actions: [],
+      watch_outs: [],
+      region_notes: 'No region-specific notes were included.',
+      follow_up_questions: [],
+      sources: [],
+      model_used: state.lastModel,
+    };
+  }
+
+  return {
+    headline: typeof value.headline === 'string' && value.headline.trim() ? value.headline.trim() : 'Groundnut advisory',
+    summary: typeof value.summary === 'string' && value.summary.trim() ? value.summary.trim() : 'No summary returned.',
+    urgency: typeof value.urgency === 'string' && value.urgency.trim() ? value.urgency.trim() : 'Medium',
+    confidence: typeof value.confidence === 'string' && value.confidence.trim() ? value.confidence.trim() : 'Moderate',
+    possible_causes: ensureArray(value.possible_causes),
+    recommended_actions: ensureArray(value.recommended_actions),
+    watch_outs: ensureArray(value.watch_outs),
+    region_notes: typeof value.region_notes === 'string' && value.region_notes.trim() ? value.region_notes.trim() : 'No region-specific notes were included.',
+    follow_up_questions: ensureArray(value.follow_up_questions),
+    sources: ensureSourceArray(value.sources),
+    model_used: typeof value.model_used === 'string' && value.model_used.trim() ? value.model_used.trim() : state.lastModel,
+  };
 }
 
 function sanitizeUrl(value) {
