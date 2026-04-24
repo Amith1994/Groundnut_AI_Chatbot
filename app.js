@@ -7,10 +7,12 @@ const STORAGE_KEYS = {
 };
 
 const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
-const GEMINI_MODELS = [
+const PREFERRED_MODEL_ORDER = [
   'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
   'gemini-2.0-flash',
-  'gemini-1.5-flash',
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-flash-001',
 ];
 
 const state = {
@@ -145,8 +147,13 @@ async function handleSubmit(event) {
 async function requestGemini(question) {
   const prompt = buildPrompt(question);
   let finalError = new Error('Gemini request failed.');
+  const models = await getAvailableGenerateModels();
 
-  for (const model of GEMINI_MODELS) {
+  if (!models.length) {
+    throw new Error('No Gemini text model is available for this API key.');
+  }
+
+  for (const model of models) {
     const url = `${GEMINI_ENDPOINT}/${model}:generateContent`;
 
     try {
@@ -207,6 +214,34 @@ async function requestGemini(question) {
   }
 
   throw finalError;
+}
+
+async function getAvailableGenerateModels() {
+  const response = await fetch(GEMINI_ENDPOINT, {
+    headers: {
+      'x-goog-api-key': state.apiKey,
+    },
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    throw new Error('Gemini API key is invalid or does not have access. Update the key in Settings.');
+  }
+
+  if (!response.ok) {
+    const body = await safeJson(response);
+    throw new Error(body?.error?.message || `Could not list Gemini models (HTTP ${response.status}).`);
+  }
+
+  const data = await response.json();
+  const available = Array.isArray(data?.models) ? data.models : [];
+  const supported = available
+    .filter(model => Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes('generateContent'))
+    .map(model => String(model.name || '').replace(/^models\//, ''))
+    .filter(Boolean);
+
+  const preferred = PREFERRED_MODEL_ORDER.filter(model => supported.includes(model));
+  const fallback = supported.filter(model => !preferred.includes(model));
+  return [...preferred, ...fallback];
 }
 
 function buildPrompt(question) {
