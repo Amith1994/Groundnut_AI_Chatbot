@@ -36,9 +36,8 @@ const dom = {
   sendBtn: byId('sendBtn'),
   settingsBtn: byId('settingsBtn'),
   openSettingsBtn: byId('openSettingsBtn'),
-  closeSettingsBtn: byId('closeSettingsBtn'),
   clearChatBtn: byId('clearChatBtn'),
-  settingsModal: byId('settingsModal'),
+  settingsPanel: byId('settingsPanel'),
   saveSettingsBtn: byId('saveSettingsBtn'),
   removeKeyBtn: byId('removeKeyBtn'),
   apiKeyInput: byId('apiKeyInput'),
@@ -79,14 +78,10 @@ function bindEvents() {
   dom.userInput.addEventListener('input', autoResize);
   dom.settingsBtn.addEventListener('click', openSettings);
   dom.openSettingsBtn.addEventListener('click', openSettings);
-  dom.closeSettingsBtn.addEventListener('click', closeSettings);
   dom.saveSettingsBtn.addEventListener('click', saveSettings);
   dom.removeKeyBtn.addEventListener('click', removeApiKey);
   dom.clearChatBtn.addEventListener('click', clearChat);
   dom.menuBtn.addEventListener('click', () => dom.sidebar.classList.toggle('open'));
-  dom.settingsModal.addEventListener('click', event => {
-    if (event.target === dom.settingsModal) closeSettings();
-  });
   dom.quickTopics.addEventListener('click', handlePromptShortcut);
   dom.followUpList.addEventListener('click', handlePromptShortcut);
 }
@@ -468,7 +463,6 @@ function saveSettings() {
   localStorage.setItem(STORAGE_KEYS.profile, JSON.stringify(profile));
   renderContext();
   renderComposerState();
-  closeSettings();
 
   if (key) {
     showBanner('Settings saved. This project is ready to call Gemini from GitHub Pages.', 'success');
@@ -523,11 +517,8 @@ function showBanner(message, type) {
 
 function openSettings() {
   hydrateSettingsForm();
-  dom.settingsModal.hidden = false;
-}
-
-function closeSettings() {
-  dom.settingsModal.hidden = true;
+  dom.settingsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  dom.apiKeyInput.focus();
 }
 
 function hydrateSettingsForm() {

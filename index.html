@@ -68,6 +68,39 @@
         </dl>
       </section>
 
+      <section class="panel" id="settingsPanel">
+        <p class="panel-label">Gemini API And Farm Profile</p>
+        <div class="inline-settings">
+          <label class="field">
+            <span>Gemini API key</span>
+            <input id="apiKeyInput" type="password" placeholder="AIza..." autocomplete="off">
+          </label>
+          <label class="field">
+            <span>Region</span>
+            <input id="regionInput" type="text" placeholder="e.g. Karnataka">
+          </label>
+          <label class="field">
+            <span>Season</span>
+            <input id="seasonInput" type="text" placeholder="e.g. Kharif">
+          </label>
+          <label class="field">
+            <span>Variety / cultivar</span>
+            <input id="varietyInput" type="text" placeholder="e.g. TMV-2">
+          </label>
+          <label class="field">
+            <span>Soil type</span>
+            <input id="soilInput" type="text" placeholder="e.g. Sandy loam">
+          </label>
+        </div>
+        <p class="settings-note">
+          Save your API key and farm details here. This stays on the page and will not open as a popup.
+        </p>
+        <div class="inline-settings-actions">
+          <button class="secondary-btn" id="removeKeyBtn" type="button">Remove key</button>
+          <button class="primary-btn" id="saveSettingsBtn" type="button">Save settings</button>
+        </div>
+      </section>
+
       <section class="panel">
         <p class="panel-label">Prompt Library</p>
         <div class="topic-list" id="quickTopics">
@@ -205,51 +238,6 @@
         </aside>
       </section>
     </main>
-  </div>
-
-  <div class="modal-backdrop" id="settingsModal" hidden>
-    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-      <div class="modal-head">
-        <div>
-          <p class="eyebrow">Settings</p>
-          <h2 id="settingsTitle">Gemini API and farm profile</h2>
-        </div>
-        <button class="icon-btn" id="closeSettingsBtn" type="button" aria-label="Close settings">✕</button>
-      </div>
-
-      <div class="modal-grid">
-        <label class="field">
-          <span>Gemini API key</span>
-          <input id="apiKeyInput" type="password" placeholder="AIza..." autocomplete="off">
-        </label>
-        <label class="field">
-          <span>Region</span>
-          <input id="regionInput" type="text" placeholder="e.g. Gujarat, India">
-        </label>
-        <label class="field">
-          <span>Season</span>
-          <input id="seasonInput" type="text" placeholder="e.g. Kharif">
-        </label>
-        <label class="field">
-          <span>Variety / cultivar</span>
-          <input id="varietyInput" type="text" placeholder="e.g. TMV-2">
-        </label>
-        <label class="field">
-          <span>Soil type</span>
-          <input id="soilInput" type="text" placeholder="e.g. Sandy loam">
-        </label>
-      </div>
-
-      <p class="modal-note">
-        This project is designed for static hosting. On GitHub Pages the browser calls Gemini directly,
-        so each user must enter their own API key.
-      </p>
-
-      <div class="modal-actions">
-        <button class="secondary-btn" id="removeKeyBtn" type="button">Remove key</button>
-        <button class="primary-btn" id="saveSettingsBtn" type="button">Save settings</button>
-      </div>
-    </section>
   </div>
 
   <script src="./app.js" defer></script>
